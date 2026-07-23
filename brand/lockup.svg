@@ -1,0 +1,52 @@
+<svg viewBox="0 0 300 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HOLOGRAMA logo">
+  <!-- Full lockup: Prism Aperture mark + "HOLOGRAMA" wordmark, set in
+       Unbounded 800. Dark-only mark: only ever place on the bg canvas
+       token or darker. See USAGE.md for full usage rules.
+
+       Spacing rules (mirrors the parent Portal Ring lockup):
+       - Mark is a 64x64 unit square, left-aligned at x=0.
+       - Clearspace / minimum gap between mark and wordmark = 8 units
+         (1/8 of the mark's 64-unit size) — the same fraction the parent
+         system uses for the mark's own clearspace. This file uses a
+         24-unit gap (3x the minimum) for visual balance; never go below 8.
+       - Wordmark baseline sits at y=44 (0.6875 of the mark's 64-unit
+         height), font-size 30, letter-spacing -0.01em, weight 800.
+       - The wordmark fill is the SAME holographic gradient as the mark
+         (objectBoundingBox, so it reflows automatically at any size).
+         This is a deliberate, scoped exception to the parent system's
+         rejection of "gradient text as a crutch": HOLOGRAMA is a literal
+         hologram/AR product, so gradient-on-wordmark is earned here and
+         nowhere else — never on body copy or UI chrome. -->
+  <defs>
+    <linearGradient id="holoFacet" gradientUnits="userSpaceOnUse" x1="12.95" y1="10" x2="51.05" y2="54">
+      <stop offset="0%"   stop-color="#D63BD6"/>
+      <stop offset="35%"  stop-color="#FFC100"/>
+      <stop offset="70%"  stop-color="#00C1E5"/>
+      <stop offset="100%" stop-color="#D63BD6"/>
+    </linearGradient>
+    <linearGradient id="holoText" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0%"   stop-color="#D63BD6"/>
+      <stop offset="35%"  stop-color="#FFC100"/>
+      <stop offset="70%"  stop-color="#00C1E5"/>
+      <stop offset="100%" stop-color="#D63BD6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="300" height="64" fill="#0E0814"/>
+
+  <g fill="url(#holoFacet)" stroke="#0E0814" stroke-width="1" stroke-linejoin="round">
+    <polygon points="32,32 32,10 51.05,21"/>
+    <polygon points="32,32 51.05,21 51.05,43"/>
+    <polygon points="32,32 51.05,43 32,54"/>
+    <polygon points="32,32 32,54 12.95,43"/>
+    <polygon points="32,32 12.95,43 12.95,21"/>
+    <polygon points="32,32 12.95,21 32,10"/>
+  </g>
+
+  <text x="88" y="44"
+        font-family="Unbounded, ui-sans-serif, sans-serif"
+        font-weight="800"
+        font-size="30"
+        style="letter-spacing:-0.01em"
+        fill="url(#holoText)">HOLOGRAMA</text>
+</svg>

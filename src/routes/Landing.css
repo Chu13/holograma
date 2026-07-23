@@ -1,0 +1,105 @@
+.landing {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.landing__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0;
+}
+
+.landing__github {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.landing__github:hover {
+  color: var(--hex-tertiary);
+}
+
+.landing__hero {
+  padding: 4rem 0 5rem;
+  max-width: 42rem;
+  position: relative;
+}
+
+.landing__hero-title {
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  line-height: 1.05;
+  margin: 0 0 1.5rem;
+}
+
+.landing__hero-accent {
+  background: var(--gradient-iridescent);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.landing__hero-body {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--color-muted);
+  margin: 0 0 2rem;
+}
+
+.landing__hero-body a {
+  color: var(--hex-tertiary);
+}
+
+.landing__hero-cta {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--radius-full);
+  background: var(--gradient-iridescent);
+  color: var(--hex-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.landing__section {
+  padding: 3rem 0;
+}
+
+.landing__section-label {
+  color: var(--hex-secondary);
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+.landing__gallery-note {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  margin-top: 1.5rem;
+  max-width: 60ch;
+}
+
+.landing__footer {
+  border-top: 1px solid var(--color-border);
+  padding: 2rem 0 3rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.landing__footer-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.landing__footer-links a {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.landing__footer-links a:hover {
+  color: var(--hex-tertiary);
+}

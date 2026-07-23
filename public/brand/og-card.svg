@@ -1,0 +1,83 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HOLOGRAMA — Your work. On your table.">
+  <!-- OG / social card, 1200x630. Static design reference — faithful
+       enough to rasterize to PNG directly, or to redo as an
+       ImageResponse/Satori route later (Satori can't do SVG filters or
+       masks, so a Satori port would need to fake the blur with a
+       pre-rasterized glow PNG, the same workaround the parent site's
+       PortalRingMark uses for its ring gap).
+
+       Layout:
+       - Canvas: #0E0814, full bleed.
+       - Ambient glow: a single AmbientGlow-style blob (~440px, i.e. 70vmin
+         of the 630px-tall canvas, blurred), primary magenta at low
+         opacity, centered behind the mark — same primitive as the
+         parent site's signature glow, not a new effect.
+       - Mark + wordmark: the lockup (brand/lockup.svg) scaled 3x,
+         preserving its exact internal ratios (64-unit mark, 24-unit gap
+         -> 192px mark, 72px gap at this scale).
+       - Tagline: two lines, Hanken Grotesk, plain ink/muted — no gradient
+         on body copy, ever.
+       - Small mono tag, bottom-left: on-brand "Level" chrome (matches the
+         parent site's own Level Indicator vocabulary), not a generic
+         tracked eyebrow. -->
+  <defs>
+    <linearGradient id="holoFacet" gradientUnits="userSpaceOnUse" x1="12.95" y1="10" x2="51.05" y2="54">
+      <stop offset="0%"   stop-color="#D63BD6"/>
+      <stop offset="35%"  stop-color="#FFC100"/>
+      <stop offset="70%"  stop-color="#00C1E5"/>
+      <stop offset="100%" stop-color="#D63BD6"/>
+    </linearGradient>
+    <linearGradient id="holoText" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0%"   stop-color="#D63BD6"/>
+      <stop offset="35%"  stop-color="#FFC100"/>
+      <stop offset="70%"  stop-color="#00C1E5"/>
+      <stop offset="100%" stop-color="#D63BD6"/>
+    </linearGradient>
+    <radialGradient id="ambientGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#D63BD6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#D63BD6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glowBlur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0E0814"/>
+
+  <circle cx="300" cy="315" r="220" fill="url(#ambientGlow)" filter="url(#glowBlur)"/>
+
+  <g transform="translate(140,219) scale(3)" fill="url(#holoFacet)" stroke="#0E0814" stroke-width="1" stroke-linejoin="round">
+    <polygon points="32,32 32,10 51.05,21"/>
+    <polygon points="32,32 51.05,21 51.05,43"/>
+    <polygon points="32,32 51.05,43 32,54"/>
+    <polygon points="32,32 32,54 12.95,43"/>
+    <polygon points="32,32 12.95,43 12.95,21"/>
+    <polygon points="32,32 12.95,21 32,10"/>
+  </g>
+
+  <text x="404" y="351"
+        font-family="Unbounded, ui-sans-serif, sans-serif"
+        font-weight="800"
+        font-size="90"
+        style="letter-spacing:-0.01em"
+        fill="url(#holoText)">HOLOGRAMA</text>
+
+  <text x="404" y="411"
+        font-family="Hanken Grotesk, ui-sans-serif, sans-serif"
+        font-weight="400"
+        font-size="34"
+        fill="#F7F3FC">Your work. On your table.</text>
+
+  <text x="404" y="453"
+        font-family="Hanken Grotesk, ui-sans-serif, sans-serif"
+        font-weight="400"
+        font-size="24"
+        fill="#B2AABD">A hand-built three.js AR viewer — scan, and it appears.</text>
+
+  <text x="140" y="548"
+        font-family="Martian Mono, ui-monospace, monospace"
+        font-weight="400"
+        font-size="16"
+        style="letter-spacing:0.12em"
+        fill="#FFC100">LEVEL 05 — AR VIEWER</text>
+</svg>

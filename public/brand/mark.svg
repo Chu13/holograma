@@ -1,0 +1,29 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HOLOGRAMA">
+  <!-- Prism Aperture: HOLOGRAMA's mark. A faceted hexagonal gem/aperture —
+       a gem cut (nods to CHIARA, the jewelry piece) doubling as a
+       projector aperture (nods to the AR hologram itself). Six flat
+       facets share one diagonal gradient field, so each facet samples a
+       different point of the sweep: a holographic-foil effect built only
+       from the three brand accent hues (328° magenta-violet / 85° amber /
+       215° cyan) — no foreign hue introduced. Dark-only mark: only ever
+       place on the bg canvas token or darker. See USAGE.md for rules. -->
+  <defs>
+    <linearGradient id="holoFacet" gradientUnits="userSpaceOnUse" x1="12.95" y1="10" x2="51.05" y2="54">
+      <stop offset="0%"   stop-color="#D63BD6"/>
+      <stop offset="35%"  stop-color="#FFC100"/>
+      <stop offset="70%"  stop-color="#00C1E5"/>
+      <stop offset="100%" stop-color="#D63BD6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#0E0814"/>
+
+  <g fill="url(#holoFacet)" stroke="#0E0814" stroke-width="1" stroke-linejoin="round">
+    <polygon points="32,32 32,10 51.05,21"/>
+    <polygon points="32,32 51.05,21 51.05,43"/>
+    <polygon points="32,32 51.05,43 32,54"/>
+    <polygon points="32,32 32,54 12.95,43"/>
+    <polygon points="32,32 12.95,43 12.95,21"/>
+    <polygon points="32,32 12.95,21 32,10"/>
+  </g>
+</svg>

@@ -1,0 +1,125 @@
+/* HOLOGRAMA — global brand tokens.
+ *
+ * This is a direct port of the token values from Chu's portfolio design
+ * system (Chu-Website/BRAND.md, DESIGN.md) — HOLOGRAMA is "Level 05" of
+ * that system, not a standalone brand, so these values must stay identical
+ * to the source of truth rather than drift into a new palette.
+ *
+ * The Full Arcade Rule: exactly three accent roles, never a fourth.
+ * The System Voice Rule: --font-mono never carries a heading or a full
+ * sentence of body copy — labels and metadata only.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Hanken+Grotesk:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap");
+
+:root {
+  /* Canvas + surfaces (dark-only — never place UI on a lighter surface) */
+  --color-bg: oklch(15% 0.025 305);
+  --color-surface: oklch(21% 0.035 305);
+  --color-surface-high: oklch(27% 0.04 305);
+  --color-border: oklch(34% 0.035 305);
+
+  /* Text */
+  --color-ink: oklch(97% 0.012 305);
+  --color-muted: oklch(75% 0.028 305);
+
+  /* Accent 1 — primary (magenta-violet) */
+  --color-primary: oklch(64% 0.25 328);
+  --color-primary-deep: oklch(48% 0.22 328);
+
+  /* Accent 2 — secondary (amber) */
+  --color-secondary: oklch(85% 0.19 85);
+  --color-secondary-deep: oklch(68% 0.17 85);
+
+  /* Accent 3 — tertiary (cyan) */
+  --color-tertiary: oklch(74% 0.15 215);
+  --color-tertiary-deep: oklch(60% 0.14 215);
+
+  /* Hex fallbacks — used only where oklch() can't be parsed (canvas/SVG
+     rasterization, some PDF/print tooling) */
+  --hex-bg: #0e0814;
+  --hex-surface: #1c1425;
+  --hex-surface-high: #2b2136;
+  --hex-border: #3c3347;
+  --hex-ink: #f7f3fc;
+  --hex-muted: #b2aabd;
+  --hex-primary: #d63bd6;
+  --hex-primary-deep: #99029a;
+  --hex-secondary: #ffc100;
+  --hex-secondary-deep: #c88d00;
+  --hex-tertiary: #00c1e5;
+  --hex-tertiary-deep: #0093b4;
+
+  /* HOLOGRAMA's own iridescent signature — "Prism Aperture" gradient from
+     Brand Guardian (public/brand/mark.svg, USAGE.md): a diagonal sweep
+     across the three existing accent hues, looping back to primary so no
+     fourth hue is introduced. Reserved for the HOLOGRAMA wordmark/mark and
+     hero moments only — never body text, never product chrome. */
+  --gradient-iridescent: linear-gradient(
+    135deg,
+    var(--hex-primary) 0%,
+    var(--hex-secondary) 35%,
+    var(--hex-tertiary) 70%,
+    var(--hex-primary) 100%
+  );
+
+  /* Type */
+  --font-display: "Unbounded", sans-serif;
+  --font-body: "Hanken Grotesk", sans-serif;
+  --font-mono: "Martian Mono", monospace;
+
+  --tracking-label: 0.12em;
+
+  /* Shape — flat by design, no shadows anywhere in the system */
+  --radius-md: 1rem;
+  --radius-full: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Flat by design: no component in this system should introduce a
+   box-shadow. Depth comes from the 3-step surface scale + ambient glow. */

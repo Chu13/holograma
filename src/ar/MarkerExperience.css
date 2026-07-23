@@ -1,0 +1,58 @@
+.marker-experience {
+  position: fixed;
+  inset: 0;
+  background: var(--hex-bg);
+  z-index: 100;
+}
+
+.marker-experience__container {
+  position: absolute;
+  inset: 0;
+}
+
+.marker-experience__chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  z-index: 2;
+}
+
+.marker-experience__badge {
+  background: color-mix(in oklch, var(--hex-bg) 70%, transparent);
+  color: var(--hex-secondary);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hex-secondary);
+}
+
+.marker-experience__close {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklch, var(--hex-bg) 70%, transparent);
+  color: var(--hex-ink);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.marker-experience__status {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-ink);
+  background: color-mix(in oklch, var(--hex-bg) 80%, transparent);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  z-index: 2;
+}
+
+.marker-experience__status--error {
+  color: var(--hex-primary);
+}

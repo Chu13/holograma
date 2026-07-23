@@ -1,0 +1,68 @@
+.ar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  min-height: 44px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--gradient-iridescent);
+  color: var(--hex-bg);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+
+.ar-button:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.ar-button:focus-visible {
+  outline: 2px solid var(--hex-tertiary);
+  outline-offset: 2px;
+}
+
+.ar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ar-button--note {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  text-align: left;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  min-height: 0;
+}
+
+.ar-button-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ar-note {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  margin: 0;
+  max-width: 32ch;
+}
+
+.ar-note--error {
+  color: var(--hex-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ar-button {
+    transition: none;
+  }
+}

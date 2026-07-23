@@ -1,0 +1,39 @@
+.hotspot-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--hex-ink);
+  background: color-mix(in oklch, var(--hex-primary) 70%, transparent);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 200ms ease-out, background 200ms ease-out;
+}
+
+.hotspot-marker:hover,
+.hotspot-marker:focus-visible {
+  transform: scale(1.2);
+  background: var(--hex-primary);
+  outline: 2px solid var(--hex-tertiary);
+  outline-offset: 2px;
+}
+
+.hotspot-marker[data-active="true"] {
+  background: var(--hex-secondary);
+  border-color: var(--hex-secondary);
+}
+
+.hotspot-marker__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--hex-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot-marker {
+    transition: none;
+  }
+}
