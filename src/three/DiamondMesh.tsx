@@ -57,7 +57,17 @@ export function DiamondMesh({ sourceMesh, envMap, tier, viewMode, uvCheckerTextu
   });
 
   return (
-    <mesh ref={meshRef} geometry={sourceMesh.geometry} matrixAutoUpdate={false}>
+    // frustumCulled={false}: this mesh's bounding sphere is computed once
+    // from `geometry` and never recomputed as `matrix` is hand-copied every
+    // frame (matrixAutoUpdate={false}), so three's default frustum check can
+    // cull it incorrectly during camera movement/zoom. Cheap for a single
+    // mesh — always render it and let the GPU/depth test handle visibility.
+    <mesh
+      ref={meshRef}
+      geometry={sourceMesh.geometry}
+      matrixAutoUpdate={false}
+      frustumCulled={false}
+    >
       {viewMode === "normals" && <meshNormalMaterial />}
       {viewMode === "uv" && <meshBasicMaterial map={uvCheckerTexture} />}
       {viewMode === "wireframe" && <meshStandardMaterial wireframe color="white" />}

@@ -24,32 +24,30 @@ import type { DiamondQualityTier } from "@/three/DiamondMesh";
 import type { Hotspot } from "@/data/models";
 import "@/three/Viewer.css";
 
-// Two tiers, chosen by PerformanceMonitor's measured fps factor (0-1).
+// Two tiers, chosen by PerformanceMonitor's measured fps factor (0-1) — but
+// ONLY `bounces` differs between them. This is load-bearing, not stylistic:
+// drei's MeshRefractionMaterial wrapper derives a shader `defines` object
+// from `aberrationStrength`/`fastChroma` (CHROMATIC_ABERRATIONS/FAST_CHROMA)
+// and keys the rendered element on `JSON.stringify(defines)` (see
+// node_modules/@react-three/drei/core/MeshRefractionMaterial.js). An
+// earlier version of this file varied `aberrationStrength` between tiers
+// (0 on mobile, 0.04 on desktop) — every time PerformanceMonitor's factor
+// crossed the 0.7 threshold, that flipped `aberrationStrength` across zero,
+// which flipped the CHROMATIC_ABERRATIONS define, which changed the `key`,
+// which made React unmount+remount the material. Remounting reruns the
+// `useLayoutEffect(..., [])` that rebuilds the refraction BVH from a clone
+// of the ~132K-triangle geometry — for the frame(s) that takes, the diamond
+// has no BVH and renders black/invisible, and the resulting frame-time hit
+// pushes the fps factor down further, causing more crossings: a visible
+// "parts disappear after a while" thrashing loop on the live web viewer.
 //
-// An earlier version of this comment claimed a nonzero `aberrationStrength`
-// (dispersion/"fire") reintroduced a near-black rendering bug and shipped
-// disabled. That claim was wrong — re-investigated properly (systematic
-// isolation, one variable at a time, instead of the confounded multi-
-// variable test that produced the original false reading) and every
-// combination of bounces (1-3), aberrationStrength (0-0.04), and
-// fastChroma (true/false) rendered correctly. The original "broken"
-// screenshot was almost certainly a stale build being captured — the same
-// mistake this session already caught once elsewhere (a silent build
-// failure serving an old `dist/`). Root cause: a testing-process gap
-// (rebuild wasn't verified before screenshotting), not a rendering bug.
-// Retracted in code, README.md, and HOLOGRAMA-PROJECT.md together.
-//
-// Both tiers below are real (confirmed rendering correctly); the split is
-// a genuine, if unmeasured, mobile-GPU performance safeguard —
-// `aberrationStrength > 0` without `fastChroma` costs up to 3x the
-// ray-marching per pixel (see DiamondMesh.tsx / drei's shader source), and
-// this project has no way to profile a real mid-range phone in this
-// environment. `fastChroma: true` on both tiers because the cheap
-// direction-offset approximation looked visually equivalent to the
-// expensive per-channel path in side-by-side screenshots — no reason to
-// pay for the accurate path.
-const MOBILE_TIER: DiamondQualityTier = { bounces: 1, aberrationStrength: 0, fastChroma: true };
-const DESKTOP_TIER: DiamondQualityTier = { bounces: 2, aberrationStrength: 0.04, fastChroma: true };
+// Fix: keep `aberrationStrength` and `fastChroma` — and therefore `defines`
+// and `key` — constant across both tiers, so the material is created once
+// and never remounted. Only `bounces` is a plain shader *uniform* (updated
+// in place every frame by the wrapper's `useFrame`, no remount), so it's
+// the only thing safe to drive from PerformanceMonitor.
+const MOBILE_TIER: DiamondQualityTier = { bounces: 1, aberrationStrength: 0.03, fastChroma: true };
+const DESKTOP_TIER: DiamondQualityTier = { bounces: 2, aberrationStrength: 0.03, fastChroma: true };
 
 export type ViewerProps = {
   glbUrl: string;

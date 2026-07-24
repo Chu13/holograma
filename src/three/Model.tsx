@@ -21,7 +21,7 @@ export type ViewMode = "solid" | "wireframe" | "normals" | "uv";
 
 const DEFAULT_DIAMOND_TIER: DiamondQualityTier = {
   bounces: 2,
-  aberrationStrength: 0.02,
+  aberrationStrength: 0.03,
   fastChroma: true,
 };
 
