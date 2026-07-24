@@ -25,9 +25,9 @@ export type GalleryModel = {
 };
 
 /**
- * The gallery. Launches with CHIARA only — add a new model by dropping a
- * .glb (and pre-generated .usdz, see scripts/build-usdz.mjs) into
- * public/models/ and adding one entry here. See README.md.
+ * The gallery — add a new model by dropping a .glb (and pre-generated
+ * .usdz, see scripts/build-usdz.mjs) into public/models/ and adding one
+ * entry here. See README.md.
  */
 export const galleryModels: GalleryModel[] = [
   {
@@ -43,6 +43,16 @@ export const galleryModels: GalleryModel[] = [
       "CHIARA's diamond was authored with a specialized WebGI shader (WEBGI_materials_diamond) that three.js doesn't natively support. In this viewer, it's rendered with real ray-traced refraction (drei's MeshRefractionMaterial, true diamond IOR) — close, not identical, to the original render.",
       "In AR (Quick Look / Scene Viewer), the diamond uses a different, simpler material — high reflectivity and a clearcoat highlight instead of refraction. Neither platform's AR renderer supports true glass/gem refraction, so matching the live viewer's look isn't possible there regardless of what's exported.",
     ],
+  },
+  {
+    slug: "can",
+    name: "LATA",
+    tagline: "A photoreal PBR can — ~50K triangles, 2K WebP textures.",
+    glbUrl: "/models/can.glb",
+    usdzUrl: "/models/can.usdz",
+    posterUrl: "/posters/can-poster.webp",
+    posterAlt:
+      "A photoreal 3D can model named LATA, rendered against a dark background.",
   },
 ];
 

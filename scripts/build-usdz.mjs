@@ -2,12 +2,11 @@
 /**
  * build-usdz.mjs
  *
- * Build-time generator for public/models/chiara.usdz.
+ * Build-time generator for public/models/<slug>.usdz (defaults to chiara).
  *
- * iOS Quick Look AR requires a USDZ file (it will not open a .glb). Since
- * CHIARA is the site's one pre-vetted gallery model, the spec requires the
- * USDZ to be pre-generated at build time and committed to the repo, rather
- * than generated live on every page load.
+ * iOS Quick Look AR requires a USDZ file (it will not open a .glb). Each
+ * pre-vetted gallery model needs its USDZ pre-generated at build time and
+ * committed to the repo, rather than generated live on every page load.
  *
  * three.js ships an official USDZExporter (three/examples/jsm/exporters/
  * USDZExporter.js) that turns a loaded THREE.Object3D/Scene into a USDZ
@@ -36,6 +35,11 @@
  * app and never sets any response headers, in keeping with this project's
  * "must stay iframe-embeddable" constraint elsewhere.
  *
+ * Takes an optional model slug as its first positional argument (defaults
+ * to "chiara" for backward compatibility) and builds
+ * public/models/<slug>.usdz from public/models/<slug>.glb — same
+ * slug-as-argv convention as scripts/build-poster.mjs.
+ *
  * Known limitation (expected, not a bug): CHIARA's diamond material uses
  * non-standard WEBGI_materials_diamond / other WEBGI_* glTF extensions that
  * three.js does not understand — it does not crash, it just drops them. The
@@ -54,7 +58,8 @@
  * raw, untouched scene while the runtime path applied a transmission
  * material the exporter silently discarded anyway).
  *
- * Usage: node scripts/build-usdz.mjs   (wired up as `npm run build:usdz`)
+ * Usage: node scripts/build-usdz.mjs [slug]   (wired up as `npm run build:usdz`)
+ *        npm run build:usdz -- can
  */
 
 import { createServer } from "node:http";
@@ -63,12 +68,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+const args = process.argv.slice(2);
+const slug = args.find((a) => !a.startsWith("--")) ?? "chiara";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 const publicDir = path.join(projectRoot, "public");
 const threeDir = path.join(projectRoot, "node_modules", "three");
-const glbPath = path.join(publicDir, "models", "chiara.glb");
-const outputPath = path.join(publicDir, "models", "chiara.usdz");
+const glbPath = path.join(publicDir, "models", `${slug}.glb`);
+const outputPath = path.join(publicDir, "models", `${slug}.usdz`);
 
 const THREE_SRC_PREFIX = "/three-src/";
 const HARNESS_PATH = "/__harness.html";
@@ -179,8 +187,8 @@ window.__exportUsdz = async function () {
   gltfLoader.setDRACOLoader(dracoLoader);
 
   const [gltf, glbArrayBuffer] = await Promise.all([
-    gltfLoader.loadAsync("/models/chiara.glb"),
-    fetch("/models/chiara.glb").then((r) => r.arrayBuffer()),
+    gltfLoader.loadAsync("/models/${slug}.glb"),
+    fetch("/models/${slug}.glb").then((r) => r.arrayBuffer()),
   ]);
 
   const diamondUuids = new Set(extractDiamondMaterialUuids(glbArrayBuffer));
@@ -263,7 +271,7 @@ async function main() {
     await stat(glbPath);
   } catch {
     throw new Error(
-      `Source GLB not found at ${glbPath} — cannot build chiara.usdz.`,
+      `Source GLB not found at ${glbPath} — cannot build ${slug}.usdz.`,
     );
   }
 
@@ -339,7 +347,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[build-usdz] FAILED to build chiara.usdz");
+  console.error(`[build-usdz] FAILED to build ${slug}.usdz`);
   console.error(err?.stack ?? err);
   process.exitCode = 1;
 });

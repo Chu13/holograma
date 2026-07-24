@@ -198,10 +198,11 @@ WebXR/marker mode to work — not something this repo can change. See
 
 ## Adding a gallery model
 
-1. Drop `your-model.glb` into `public/models/`.
-2. `npm run build:usdz` currently targets CHIARA specifically — generalizing it to take a slug
-   argument (like `build-poster.mjs` and `build-card-target.mjs` already do) is the natural next
-   step; for now, adapt the constant at the top of `scripts/build-usdz.mjs`.
+1. If the source `.glb` is large or has uncompressed textures, optimize it first, e.g.
+   `gltf-transform optimize source.glb public/models/your-model.glb --compress draco
+   --texture-compress webp --texture-size 2048` — otherwise drop it into `public/models/` as-is.
+2. `npm run build:usdz -- your-model` → `public/models/your-model.usdz` (defaults to `chiara`
+   when no slug is passed, for backward compatibility).
 3. `npm run build:poster -- your-model` → `public/posters/your-model-poster.webp`.
 4. Add an entry to `galleryModels` in `src/data/models.ts` (slug, name, tagline, `glbUrl`,
    `usdzUrl`, `posterUrl`, `posterAlt`, optional `hotspots`/`materialNotes`).
