@@ -41,9 +41,12 @@ feature.
   default CDN decoder, so the app has no runtime dependency on a third party). `Viewer.tsx` wraps
   the R3F `Canvas`, lazy-mounting it only once the viewer scrolls into view (`useInViewport`) and
   falling back to a poster image otherwise — no WebGL, `prefers-reduced-data`, and "not yet
-  visible" all render the same static fallback. Lighting is a **procedurally generated** studio
-  environment (`ProceduralEnvironment.tsx`, PMREM from three's own `RoomEnvironment` — not an HDRI
-  fetched from a CDN, same self-contained principle as the Draco decoder).
+  visible" all render the same static fallback. Lighting starts as a **procedurally generated**
+  studio environment (`ProceduralEnvironment.tsx`, PMREM from three's own `RoomEnvironment` — zero
+  network cost, so there's never a blank/unlit flash), then upgrades to a real, **self-hosted**
+  studio HDRI (`HdriEnvironment.tsx`, Poly Haven CC0, see `public/hdri/README.md`) once it loads —
+  never drei's CDN preset loader. See "Render quality" below for why this two-step matters and for
+  the diamond's ray-traced refraction material.
 - `src/inspect/` — the inspector. `inspectModel.ts` runs `@gltf-transform/core`'s `WebIO` +
   `@gltf-transform/functions`'s `inspect()` **in the browser**, decoding Draco via the same
   vendored decoder (loaded as a classic script for its `DracoDecoderModule` global — see
@@ -84,15 +87,55 @@ binary `.usdc` crate (verified: `unzip -l` shows 55/55 entries are `.usda`). Val
 USDZ; **not device-tested against real Quick Look** in this environment (no physical iPhone
 available) — recommended before calling AR fully verified.
 
-### The diamond material
+### Render quality: two strategies for one gem, on purpose
 
 CHIARA's stone materials use a vendor extension, `WEBGI_materials_diamond` (refractive index 2.6,
 per the source data), that three.js doesn't understand — it's silently dropped during parsing.
 `src/three/diamondMaterials.ts` detects which materials carried that extension (by reading the raw
 glTF JSON, then matching `extras.uuid` against `material.userData.uuid` — three's GLTFLoader keeps
-`extras` but drops unknown `extensions`) and swaps them for a `MeshPhysicalMaterial` transmission
-approximation. **Stated as an approximation in the UI**, not hidden — see the model page's material
-notes and `data/models.ts`'s `materialNotes`.
+`extras` but drops unknown `extensions`). What happens next **deliberately differs by context**,
+because "make the diamond look good" is two different problems:
+
+- **Live viewer** (`src/three/DiamondMesh.tsx`) — real ray-traced refraction via drei's
+  `MeshRefractionMaterial`: rays are marched through the actual faceted geometry against the scene's
+  HDRI, reaching true diamond `ior: 2.4` (plain `MeshPhysicalMaterial.ior` clamps to ~2.33 — visibly
+  wrong for a diamond). Rendered as a separate JSX `<mesh>` twin, not a material swap on the loaded
+  mesh directly — `MeshRefractionMaterial`'s own implementation needs to be a real child of a
+  `<mesh>` in R3F's reconciler tree (it builds a BVH from its parent's geometry and updates
+  camera-matrix uniforms every frame), which a plain `GLTFLoader`-loaded mesh added via
+  `<primitive>` isn't. The original mesh is hidden and kept as the position source of truth (so
+  the exploded-view slider still moves it correctly); the twin copies its world transform every
+  frame and shares its `geometry` (no vertex duplication).
+- **AR export** (both `scripts/build-usdz.mjs` and `src/ar/usdzRuntime.ts`, via
+  `applyExportDiamondMaterials`) — a plain `MeshPhysicalMaterial` tuned as a *reflection*, not
+  transmission, strategy: low roughness, `clearcoat: 1`, `ior` near three's ceiling. This isn't a
+  downgrade for AR's sake — it's the only strategy that reaches AR at all. Researched, not guessed:
+  iOS Quick Look (RealityKit) has no true refraction — a transmissive USDZ just shows the background
+  through a "hollow bubble." Android Scene Viewer (Filament) renders `KHR_materials_transmission`
+  **opaque**. three.js's own `USDZExporter` already drops `transmission`/`thickness`/`volume` when
+  writing a `MeshPhysicalMaterial` to USD — it only ever writes `ior`/`clearcoat`/`clearcoatRoughness`
+  for that material type. So a transmission-tuned material is 100% wasted on AR regardless; `clearcoat`
+  is literally what RealityKit's own docs describe as simulating "a clear, shiny coating."
+
+**`MeshRefractionMaterial` never gets a swapped envMap.** It's only created once the *final* HDRI
+(not the earlier procedural one) has resolved — swapping `envMap` on an already-compiled instance
+hit a real, verified bug (browser console, not assumed): a "macro redefined" shader compile error,
+traced to three.js's `WebGLProgram` auto-injecting `CUBEUV_TEXEL_WIDTH`/`HEIGHT`/`MAX_MIP` on
+recompile in a way that collided with drei's own copy of the same defines. Until the real HDRI is
+ready, the diamond shows the AR-export-style reflection material instead (via
+`applyViewerFallbackDiamondMaterials`) — never invisible, never black.
+
+**Tuned by real screenshots, not left at drei's defaults.** `bounces: 1` (not drei's default 3) and
+`fresnel: 1` (not drei's default 0) — more internal ray bounces made the gem progressively darker
+for this specific faceted geometry against this specific HDRI (each bounce statistically samples
+more of the HDRI's darker regions before exiting), and with `fresnel: 0` the gem rendered almost
+entirely black since the HDRI's bright softboxes sit at a narrow angular range with no Fresnel rim
+term to blend in grazing-angle reflection. A "desktop tier" with dispersion (`aberrationStrength >
+0`) was tested and reintroduced the same near-black rendering — not yet root-caused, so it's off for
+now rather than shipped broken; see `Viewer.tsx`'s `DIAMOND_TIER` comment.
+
+Both strategies are **stated as approximations in the UI**, not hidden — see the model page's
+material notes and `data/models.ts`'s `materialNotes`.
 
 ### The card + marker mode
 
@@ -167,3 +210,16 @@ npm test
   development environment.
 - `USDZExporter` output is ASCII (`.usda`), not binary (`.usdc`) — larger files than a packed
   crate would produce, though still a spec-valid USDZ.
+- Diamond dispersion ("fire") in the live viewer is disabled — a nonzero `aberrationStrength`
+  reintroduced the same near-black rendering bug that `bounces`/`fresnel` tuning fixed for the base
+  case, and it wasn't root-caused in the time available. See "Render quality" above.
+- `MeshRefractionMaterial` is not gated by an explicit device-capability check beyond
+  `renderer.capabilities.isWebGL2` — a device with WebGL2 but a GPU that can't compile this specific
+  shader would need to hit an actual compile failure to fall back, which isn't currently caught
+  (three.js shader compile failures are async/silent from JS's perspective, not a catchable
+  exception at material-construction time).
+- The self-hosted HDRI (`public/hdri/brown_photostudio_02_2k.hdr`, ~6.2MB) adds real load time on a
+  slow connection; `ProceduralEnvironment`'s instant procedural fallback covers the gap, but the
+  diamond specifically waits for the real HDRI before it renders with refraction (see above) — on a
+  slow connection, expect a longer window with the simpler AR-style reflection material showing
+  instead.

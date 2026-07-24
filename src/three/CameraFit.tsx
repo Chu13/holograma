@@ -1,11 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
+export type ModelBounds = {
+  center: THREE.Vector3;
+  size: THREE.Vector3;
+  min: THREE.Vector3;
+};
+
 export type CameraFitProps = {
   root: THREE.Object3D | null;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  /** Reports the model's world-space bounding box once per fit — e.g. so ContactShadows can size/place itself instead of using CHIARA-specific magic numbers. */
+  onFit?: (bounds: ModelBounds) => void;
 };
 
 /**
@@ -13,8 +21,15 @@ export type CameraFitProps = {
  * default model and an arbitrary drag & dropped model can be wildly
  * different scales — a fixed camera position only works for one of them.
  */
-export function CameraFit({ root, controlsRef }: CameraFitProps) {
+export function CameraFit({ root, controlsRef, onFit }: CameraFitProps) {
   const camera = useThree((state) => state.camera);
+
+  // Stash the latest onFit in a ref rather than the effect's dep array —
+  // Viewer.tsx isn't expected to memoize it, and this effect must only
+  // re-run when the model itself (re)loads, not on every parent re-render
+  // (a viewMode/explodeAmount change would otherwise snap the camera back).
+  const onFitRef = useRef(onFit);
+  onFitRef.current = onFit;
 
   useEffect(() => {
     if (!root) return;
@@ -25,6 +40,8 @@ export function CameraFit({ root, controlsRef }: CameraFitProps) {
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const radius = Math.max(size.length() / 2, 0.01);
+
+    onFitRef.current?.({ center: center.clone(), size: size.clone(), min: box.min.clone() });
 
     const perspective = camera as THREE.PerspectiveCamera;
     const fov = perspective.isPerspectiveCamera ? (perspective.fov * Math.PI) / 180 : Math.PI / 4;

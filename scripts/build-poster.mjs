@@ -40,27 +40,29 @@ const HARNESS_HTML = `<!doctype html><html><body style="margin:0;background:#0E0
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, ${width / height}, 0.01, 100);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setSize(${width}, ${height});
 renderer.setPixelRatio(2);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-// Same procedural studio lighting as the live app's
-// src/three/ProceduralEnvironment.tsx (PMREM from three's own
-// RoomEnvironment) — the metal/diamond materials are near-black without
-// an environment to reflect, and the poster should look like the real
-// viewer, not a flatter stand-in.
+// Same real HDRI as the live app's src/three/HdriEnvironment.tsx (Poly
+// Haven "brown_photostudio_02", 2K — see public/hdri/README.md) instead of
+// a hand-rolled light rig, so the static poster fallback actually matches
+// what the interactive viewer shows once it mounts.
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
-scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+const hdrTexture = await new RGBELoader().loadAsync('/hdri/brown_photostudio_02_2k.hdr');
+scene.environment = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+hdrTexture.dispose();
 pmremGenerator.dispose();
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x22182b, 0.6));
-const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(2, 3, 4); scene.add(key);
-const rim = new THREE.DirectionalLight(0x00c1e5, 0.8); rim.position.set(-1, 2, -3); scene.add(rim);
+scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
 const draco = new DRACOLoader();
 draco.setDecoderPath('/draco/');
@@ -88,6 +90,8 @@ function contentTypeFor(filePath) {
   if (filePath.endsWith(".wasm")) return "application/wasm";
   if (filePath.endsWith(".glb")) return "model/gltf-binary";
   if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
+  // .hdr and anything else falls through to a generic binary type — fine,
+  // three's loaders read these by bytes, not by Content-Type sniffing.
   return "application/octet-stream";
 }
 

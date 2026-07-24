@@ -38,11 +38,12 @@ only. Source files in `brand/` (working files) and `public/brand/` (shipped asse
 `USAGE.md` documenting the rules.
 
 ### The viewer (three.js + React Three Fiber)
-Self-hosted Draco decoder (no CDN dependency), procedurally generated studio lighting (PMREM from
-three's own `RoomEnvironment`, not a fetched HDRI), rendered contact shadows, keyboard-operable
-orbit controls, and a poster-image fallback that gates the entire three.js/R3F bundle behind
-`IntersectionObserver` — the landing page's own JS bundle is 239KB gzipped 77KB; the 3D/AR stack
-never loads until a model page is actually opened.
+Self-hosted Draco decoder (no CDN dependency), a real self-hosted studio HDRI that progressively
+replaces an instant procedural fallback (see "Render quality upgrade" below), rendered contact
+shadows fitted to each model's actual bounding box, keyboard-operable orbit controls, and a
+poster-image fallback that gates the entire three.js/R3F bundle behind `IntersectionObserver` — the
+landing page's own JS bundle is 239KB gzipped 77KB; the 3D/AR stack never loads until a model page
+is actually opened.
 
 ### Real inspection, not a demo
 `@gltf-transform/core`'s `WebIO` + `@gltf-transform/functions`'s `inspect()` run **in the
@@ -63,11 +64,50 @@ is flat-shaded (hard facet edges need split vertices) — verified, not assumed.
 - Android + dropped model: no Scene Viewer path exists (needs a public URL) and WebXR placement
   isn't wired up yet — the UI says so plainly instead of pretending.
 
-### The diamond material
-CHIARA's stone materials carry a vendor extension (`WEBGI_materials_diamond`) three.js can't
-render. Detected by cross-referencing the raw glTF JSON against `material.userData.uuid` after
-load (three keeps `extras`, drops unknown `extensions`), then approximated with a
-`MeshPhysicalMaterial` transmission material — stated as an approximation in the UI, not hidden.
+### Render quality upgrade (second pass, after initial ship)
+
+The user asked for the best possible quality in both the web viewer and AR — researched first
+(three parallel investigations: current code state, real-time PBR/gem techniques, native-AR
+material fidelity limits), then implemented. The core finding: **web-viewer quality and AR quality
+are different problems with different ceilings.** True diamond refraction is architecturally
+impossible in native AR regardless of what's exported — iOS RealityKit has no true refraction, and
+Android Scene Viewer/Filament renders `KHR_materials_transmission` **opaque** (confirmed via
+multiple community reports, not assumed) — so the fix isn't "export better," it's "export
+differently": a reflection-based recipe (clearcoat + high ior + low roughness) instead of a
+transmission-based one, since that's what actually survives `USDZExporter` and renders on both
+platforms.
+
+**What shipped:**
+- A real, self-hosted CC0 studio HDRI (Poly Haven `brown_photostudio_02`, 2K) layered progressively
+  over the existing procedural fallback — the single highest-leverage change, since CHIARA has zero
+  texture maps and all its visual detail comes from environment reflections.
+- **Real ray-traced diamond refraction** in the live viewer (drei's `MeshRefractionMaterial`, true
+  diamond IOR 2.4) — CHIARA's stone materials carry a vendor extension (`WEBGI_materials_diamond`)
+  three.js can't render; detected by cross-referencing the raw glTF JSON against
+  `material.userData.uuid` (three keeps `extras`, drops unknown `extensions`).
+- A **separate, distinct material strategy for AR export** (reflection-based, not transmission) —
+  applied consistently to both AR export paths, which had actually diverged before this pass: the
+  build-time script exported the raw untouched scene while the runtime path applied a transmission
+  material the exporter silently discarded anyway. Now both apply the same tuned recipe.
+- Explicit tone mapping (`ACESFilmicToneMapping`), a per-model bounding-box-fitted contact shadow
+  (previously hardcoded to CHIARA's exact scale), and `AdaptiveDpr`/`AdaptiveEvents` for
+  interaction-driven performance scaling.
+
+**Real bugs found and fixed along the way** (verified via actual browser testing, not guessed):
+swapping the diamond's environment map on an already-compiled `MeshRefractionMaterial` triggered a
+genuine three.js/drei shader-recompile conflict ("macro redefined") — fixed by only ever creating
+the material once, with its final HDRI, never a swapped one. And drei's default refraction settings
+(`bounces: 3`, `fresnel: 0`) rendered the gem almost entirely black against this specific HDRI —
+tuned down to `bounces: 1` with `fresnel: 1` via iterative real-screenshot comparison until it
+actually looked like a diamond, not guessed from documentation.
+
+**What didn't ship:** a "desktop tier" with nonzero dispersion (`aberrationStrength > 0`)
+reintroduced the same near-black rendering and wasn't root-caused in the time available — shipped
+disabled rather than broken. Optional post-processing (bloom) and marker-mode lighting parity were
+scoped in the plan as explicitly optional/evaluate-last and weren't pursued, given the diamond
+refraction alone was already the major win. All of this is documented in code comments at the exact
+decision points (`Viewer.tsx`'s `DIAMOND_TIER`, `DiamondMesh.tsx`, `diamondMaterials.ts`) and in
+`README.md`'s "Render quality" section, not just here.
 
 ### The card + marker mode
 Card art (Brand Guardian's mark, a scattered faceted background pattern for real MindAR
@@ -102,6 +142,11 @@ iframe embed test against the production URL loads cleanly with zero console err
 - The build-time asset scripts (`build:usdz`, `build:poster`) target CHIARA specifically; taking a
   `--slug` argument like `build-poster.mjs`/`build-card-target.mjs` already do is the natural next
   step for adding a second gallery model.
+- Diamond dispersion ("fire") in the live viewer is disabled — a real, verified rendering
+  regression when enabled, not yet root-caused (see "Render quality upgrade" above).
+- `MeshRefractionMaterial`'s device-capability gate is WebGL2-only; a device with WebGL2 but a GPU
+  that can't compile this specific shader would need an actual compile failure to fall back, which
+  isn't currently caught (shader compile failures are async/silent from JS's perspective).
 
 ## Coordination needed on the portfolio side
 

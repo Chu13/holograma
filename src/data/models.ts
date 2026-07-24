@@ -40,7 +40,8 @@ export const galleryModels: GalleryModel[] = [
     posterAlt:
       "A faceted diamond and gold jewelry piece named CHIARA, rendered in 3D against a dark background.",
     materialNotes: [
-      "CHIARA's diamond was authored with a specialized WebGI shader (WEBGI_materials_diamond) that three.js doesn't natively support. HOLOGRAMA approximates it with a physical transmission material — close, not identical, to the original render.",
+      "CHIARA's diamond was authored with a specialized WebGI shader (WEBGI_materials_diamond) that three.js doesn't natively support. In this viewer, it's rendered with real ray-traced refraction (drei's MeshRefractionMaterial, true diamond IOR) — close, not identical, to the original render.",
+      "In AR (Quick Look / Scene Viewer), the diamond uses a different, simpler material — high reflectivity and a clearcoat highlight instead of refraction. Neither platform's AR renderer supports true glass/gem refraction, so matching the live viewer's look isn't possible there regardless of what's exported.",
     ],
   },
 ];

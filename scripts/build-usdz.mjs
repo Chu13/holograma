@@ -38,11 +38,21 @@
  *
  * Known limitation (expected, not a bug): CHIARA's diamond material uses
  * non-standard WEBGI_materials_diamond / other WEBGI_* glTF extensions that
- * three.js does not understand. three simply falls back to whatever
- * standard PBR properties exist on the material — it does not crash, and it
- * does not produce true diamond refraction. That is a known, documented
- * approximation elsewhere in the project; this script does not treat the
- * resulting "unknown extension" warnings as fatal.
+ * three.js does not understand — it does not crash, it just drops them. The
+ * harness below detects which materials carried that extension (same
+ * `extras.uuid` matching technique as src/three/diamondMaterials.ts) and
+ * swaps them to the same AR-export "reflection strategy" recipe that file
+ * uses for the runtime (drag-dropped-model) export path: a plain
+ * MeshPhysicalMaterial (metalness 0, low roughness, clearcoat, ior pushed
+ * toward the engine's ceiling) — NOT `transmission`, which three.js's own
+ * USDZExporter drops entirely for MeshPhysicalMaterial, and which neither
+ * iOS Quick Look (RealityKit has no true refraction) nor Android Scene
+ * Viewer (Filament renders KHR_materials_transmission opaque) render
+ * correctly regardless. This keeps the two export paths — this build-time
+ * script for CHIARA, and src/ar/usdzRuntime.ts for a dropped model —
+ * consistent instead of diverging (they used to: this script exported the
+ * raw, untouched scene while the runtime path applied a transmission
+ * material the exporter silently discarded anyway).
  *
  * Usage: node scripts/build-usdz.mjs   (wired up as `npm run build:usdz`)
  */
@@ -118,6 +128,44 @@ function arrayBufferToBase64(arrayBuffer) {
   return btoa(binary);
 }
 
+// Mirrors src/three/diamondMaterials.ts's extractDiamondMaterialUuids —
+// duplicated here (not imported) because this harness runs in a bare
+// browser page outside the app's own Vite/TS module graph.
+function extractDiamondMaterialUuids(glbArrayBuffer) {
+  const view = new DataView(glbArrayBuffer);
+  const chunkLength = view.getUint32(12, true);
+  const jsonBytes = new Uint8Array(glbArrayBuffer, 20, chunkLength);
+  const json = JSON.parse(new TextDecoder("utf-8").decode(jsonBytes));
+  const uuids = [];
+  for (const material of json.materials ?? []) {
+    if (material.extensions?.WEBGI_materials_diamond === undefined) continue;
+    if (material.extras?.uuid) uuids.push(material.extras.uuid);
+  }
+  return uuids;
+}
+
+// Mirrors src/three/diamondMaterials.ts's applyExportDiamondMaterials — see
+// that file for the full reasoning (reflection strategy, not transmission).
+function applyExportDiamondMaterials(root, uuidSet) {
+  if (uuidSet.size === 0) return;
+  root.traverse((child) => {
+    if (!child.isMesh || Array.isArray(child.material)) return;
+    const uuid = child.material.userData?.uuid;
+    if (!uuid || !uuidSet.has(uuid)) return;
+    const source = child.material;
+    child.material = new THREE.MeshPhysicalMaterial({
+      color: source.color ? source.color.clone() : new THREE.Color(0xffffff),
+      metalness: 0,
+      roughness: 0.03,
+      ior: 2.33,
+      clearcoat: 1,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 1.3,
+      name: source.name,
+    });
+  });
+}
+
 window.__exportUsdz = async function () {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("/draco/");
@@ -125,7 +173,13 @@ window.__exportUsdz = async function () {
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  const gltf = await gltfLoader.loadAsync("/models/chiara.glb");
+  const [gltf, glbArrayBuffer] = await Promise.all([
+    gltfLoader.loadAsync("/models/chiara.glb"),
+    fetch("/models/chiara.glb").then((r) => r.arrayBuffer()),
+  ]);
+
+  const diamondUuids = new Set(extractDiamondMaterialUuids(glbArrayBuffer));
+  applyExportDiamondMaterials(gltf.scene, diamondUuids);
 
   const exporter = new USDZExporter();
   const arrayBuffer = await exporter.parseAsync(gltf.scene, {
@@ -141,6 +195,7 @@ window.__exportUsdz = async function () {
   return {
     base64: arrayBufferToBase64(arrayBuffer),
     byteLength: arrayBuffer.byteLength,
+    diamondMaterialCount: diamondUuids.size,
   };
 };
 
@@ -269,7 +324,8 @@ async function main() {
 
     console.log(
       `[build-usdz] Wrote ${path.relative(projectRoot, outputPath)} ` +
-        `(${buffer.length.toLocaleString()} bytes)`,
+        `(${buffer.length.toLocaleString()} bytes, ` +
+        `${result.diamondMaterialCount} diamond material(s) reflection-tuned for AR)`,
     );
   } finally {
     if (browser) await browser.close();

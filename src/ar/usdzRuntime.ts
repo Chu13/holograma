@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js";
+import { applyExportDiamondMaterials, findDiamondMeshes } from "@/three/diamondMaterials";
 
 /**
  * Runtime USDZ export for a drag & dropped model, so iOS Quick Look has
@@ -20,12 +21,43 @@ import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js";
  * await points, so it isn't a hard freeze — the UI shows a loading state
  * regardless (see ui/ARButton.tsx) so this is never silent.
  *
- * Limits, surfaced in the UI, not hidden: simplified PBR materials (no
- * dispersion/transmission tuning beyond what USDZExporter itself supports),
- * no animations, no material variants.
+ * Limits, surfaced in the UI, not hidden: simplified PBR materials, no
+ * animations, no material variants.
  */
 export async function generateRuntimeUsdz(root: THREE.Object3D): Promise<Blob> {
-  const exporter = new USDZExporter();
-  const bytes = await exporter.parseAsync(root, { quickLookCompatible: true });
-  return new Blob([new Uint8Array(bytes)], { type: "model/vnd.usdz+zip" });
+  const diamondUuids = root.userData.holoDiamondUuids as Set<string> | undefined;
+  const diamondMatches = diamondUuids ? findDiamondMeshes(root, diamondUuids) : [];
+
+  // `root` is the SAME live object graph the viewer is currently
+  // rendering (see three/Model.tsx's onReady) — any diamond meshes may be
+  // `visible = false` right now (hidden in favor of a DiamondMesh twin
+  // using MeshRefractionMaterial, which USDZExporter can't read at all —
+  // see three/diamondMaterials.ts's module comment for why the viewer and
+  // export paths can never share a material instance). Make them visible
+  // with the AR-export reflection-strategy material for the export, then
+  // put everything back exactly as it was — the live viewer must not be
+  // left changed by the user tapping "View in AR."
+  const restore = diamondMatches.map(({ mesh }) => ({
+    mesh,
+    visible: mesh.visible,
+    material: mesh.material,
+  }));
+
+  try {
+    for (const { mesh } of diamondMatches) {
+      mesh.visible = true;
+    }
+    if (diamondUuids) {
+      applyExportDiamondMaterials(root, diamondUuids);
+    }
+
+    const exporter = new USDZExporter();
+    const bytes = await exporter.parseAsync(root, { quickLookCompatible: true });
+    return new Blob([new Uint8Array(bytes)], { type: "model/vnd.usdz+zip" });
+  } finally {
+    for (const { mesh, visible, material } of restore) {
+      mesh.visible = visible;
+      mesh.material = material;
+    }
+  }
 }
