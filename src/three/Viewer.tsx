@@ -1,6 +1,12 @@
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { AdaptiveDpr, AdaptiveEvents, ContactShadows, OrbitControls } from "@react-three/drei";
+import {
+  AdaptiveDpr,
+  AdaptiveEvents,
+  ContactShadows,
+  OrbitControls,
+  PerformanceMonitor,
+} from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useInViewport } from "@/lib/useInViewport";
@@ -18,21 +24,32 @@ import type { DiamondQualityTier } from "@/three/DiamondMesh";
 import type { Hotspot } from "@/data/models";
 import "@/three/Viewer.css";
 
-// One fixed diamond quality tier, not two — empirically tuned against
-// CHIARA + brown_photostudio_02 via real screenshots (not guessed), and
-// deliberately conservative rather than adaptive:
-// - `bounces: 1`: more internal ray bounces made the gem progressively
-//   darker, not more detailed, for this specific faceted geometry/HDRI
-//   pairing (each extra bounce statistically samples more of the HDRI's
-//   darker regions before exiting) — tested up to 3, 1 looked best.
-// - `aberrationStrength: 0`: tested a nonzero "desktop" dispersion tier
-//   (0.03 + fastChroma:false) and it reintroduced the same near-black
-//   rendering — a real, verified interaction, not yet root-caused. Chasing
-//   it further risked shipping nothing; a correct, bright, non-dispersive
-//   gem beats a broken dispersive one. Worth revisiting.
-// PerformanceMonitor/AdaptiveDpr/AdaptiveEvents (below) still matter for
-// overall scene performance — this tier just isn't wired to them for now.
-const DIAMOND_TIER: DiamondQualityTier = { bounces: 1, aberrationStrength: 0, fastChroma: true };
+// Two tiers, chosen by PerformanceMonitor's measured fps factor (0-1).
+//
+// An earlier version of this comment claimed a nonzero `aberrationStrength`
+// (dispersion/"fire") reintroduced a near-black rendering bug and shipped
+// disabled. That claim was wrong — re-investigated properly (systematic
+// isolation, one variable at a time, instead of the confounded multi-
+// variable test that produced the original false reading) and every
+// combination of bounces (1-3), aberrationStrength (0-0.04), and
+// fastChroma (true/false) rendered correctly. The original "broken"
+// screenshot was almost certainly a stale build being captured — the same
+// mistake this session already caught once elsewhere (a silent build
+// failure serving an old `dist/`). Root cause: a testing-process gap
+// (rebuild wasn't verified before screenshotting), not a rendering bug.
+// Retracted in code, README.md, and HOLOGRAMA-PROJECT.md together.
+//
+// Both tiers below are real (confirmed rendering correctly); the split is
+// a genuine, if unmeasured, mobile-GPU performance safeguard —
+// `aberrationStrength > 0` without `fastChroma` costs up to 3x the
+// ray-marching per pixel (see DiamondMesh.tsx / drei's shader source), and
+// this project has no way to profile a real mid-range phone in this
+// environment. `fastChroma: true` on both tiers because the cheap
+// direction-offset approximation looked visually equivalent to the
+// expensive per-channel path in side-by-side screenshots — no reason to
+// pay for the accurate path.
+const MOBILE_TIER: DiamondQualityTier = { bounces: 1, aberrationStrength: 0, fastChroma: true };
+const DESKTOP_TIER: DiamondQualityTier = { bounces: 2, aberrationStrength: 0.04, fastChroma: true };
 
 export type ViewerProps = {
   glbUrl: string;
@@ -95,6 +112,11 @@ export function Viewer({
   // immediately via ProceduralEnvironment mutating scene.environment
   // directly — this state is only ever used for the diamond's material.
   const [envTexture, setEnvTexture] = useState<THREE.Texture | null>(null);
+  const [qualityFactor, setQualityFactor] = useState(1);
+  const diamondTier = useMemo(
+    () => (qualityFactor >= 0.7 ? DESKTOP_TIER : MOBILE_TIER),
+    [qualityFactor],
+  );
 
   // Poster-first is the whole point: no WebGL, "reduced data", or simply
   // not yet scrolled into view all render the same static fallback — the
@@ -142,10 +164,13 @@ export function Viewer({
               <HdriEnvironment onReady={setEnvTexture} />
             </Suspense>
 
-            {/* R3F's own (built-in, distinct from drei's separate fps-
-                sampling PerformanceMonitor) interaction-driven performance
-                regression: drops resolution/raycasting during camera
-                movement (OrbitControls) and restores it at rest. */}
+            {/* drei's fps-sampling PerformanceMonitor drives the diamond's
+                quality tier (above). R3F's own, separate, built-in
+                interaction-driven performance regression — AdaptiveDpr/
+                AdaptiveEvents — drops resolution/raycasting during camera
+                movement (OrbitControls) and restores it at rest; the two
+                mechanisms are independent and both useful. */}
+            <PerformanceMonitor onChange={({ factor }) => setQualityFactor(factor)} />
             <AdaptiveDpr pixelated />
             <AdaptiveEvents />
 
@@ -154,7 +179,7 @@ export function Viewer({
               viewMode={viewMode}
               explodeAmount={explodeAmount}
               envMap={envTexture}
-              diamondTier={DIAMOND_TIER}
+              diamondTier={diamondTier}
               onReady={(root) => {
                 setLoadedRoot(root);
                 onModelReady?.(root);

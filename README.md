@@ -125,14 +125,32 @@ recompile in a way that collided with drei's own copy of the same defines. Until
 ready, the diamond shows the AR-export-style reflection material instead (via
 `applyViewerFallbackDiamondMaterials`) — never invisible, never black.
 
-**Tuned by real screenshots, not left at drei's defaults.** `bounces: 1` (not drei's default 3) and
-`fresnel: 1` (not drei's default 0) — more internal ray bounces made the gem progressively darker
-for this specific faceted geometry against this specific HDRI (each bounce statistically samples
-more of the HDRI's darker regions before exiting), and with `fresnel: 0` the gem rendered almost
-entirely black since the HDRI's bright softboxes sit at a narrow angular range with no Fresnel rim
-term to blend in grazing-angle reflection. A "desktop tier" with dispersion (`aberrationStrength >
-0`) was tested and reintroduced the same near-black rendering — not yet root-caused, so it's off for
-now rather than shipped broken; see `Viewer.tsx`'s `DIAMOND_TIER` comment.
+**Tuned by real screenshots, not left at drei's defaults.** `fresnel: 1` (not drei's default 0) —
+with `fresnel: 0` the gem rendered almost entirely black, since this HDRI's bright softboxes sit at
+a narrow angular range with no Fresnel rim term to blend in grazing-angle reflection at the edges.
+This one was a genuine, confirmed fix.
+
+A separate, *incorrect* claim shipped briefly and was retracted after further investigation: that
+enabling dispersion (`aberrationStrength > 0`, the chromatic "fire" effect) reintroduced the same
+near-black rendering. It doesn't. That finding came from a confounded test — three parameters
+(`bounces`, `aberrationStrength`, `fastChroma`) changed at once, and separately, the screenshot
+comparing them was very likely stale (a build hadn't been re-verified before capturing it — the
+same mistake this session had already caught once elsewhere). Re-tested properly — one variable at
+a time, rebuild verified before every screenshot — and every combination tested (`bounces` 1-3,
+`aberrationStrength` 0-0.04, `fastChroma` both) rendered correctly. Dispersion is enabled by
+default on the desktop tier (see below). If you're reading old commit history and see the retracted
+claim, this paragraph supersedes it.
+
+`bounces`/`aberrationStrength`/`fastChroma` are now a genuine two-tier adaptive setting, not a
+correctness workaround — `Viewer.tsx`'s `MOBILE_TIER`/`DESKTOP_TIER`, chosen by drei's
+`PerformanceMonitor` (measured fps factor). This *is* a real, if unmeasured-on-actual-hardware,
+performance consideration: `aberrationStrength > 0` without `fastChroma` cost up to 3x the
+per-pixel ray-marching (see the shader source), and this project has no way to profile a real
+mid-range phone in this environment — so mobile stays at the cheapest correct setting
+(`bounces: 1, aberrationStrength: 0`) while desktop gets dispersion (`bounces: 2,
+aberrationStrength: 0.04`). Both tiers use `fastChroma: true` — the cheap direction-offset
+approximation looked visually equivalent to the expensive per-channel path in side-by-side
+screenshots, so there's no reason to pay for the accurate one.
 
 Both strategies are **stated as approximations in the UI**, not hidden — see the model page's
 material notes and `data/models.ts`'s `materialNotes`.
@@ -210,9 +228,6 @@ npm test
   development environment.
 - `USDZExporter` output is ASCII (`.usda`), not binary (`.usdc`) — larger files than a packed
   crate would produce, though still a spec-valid USDZ.
-- Diamond dispersion ("fire") in the live viewer is disabled — a nonzero `aberrationStrength`
-  reintroduced the same near-black rendering bug that `bounces`/`fresnel` tuning fixed for the base
-  case, and it wasn't root-caused in the time available. See "Render quality" above.
 - `MeshRefractionMaterial` is not gated by an explicit device-capability check beyond
   `renderer.capabilities.isWebGL2` — a device with WebGL2 but a GPU that can't compile this specific
   shader would need to hit an actual compile failure to fall back, which isn't currently caught

@@ -96,17 +96,30 @@ platforms.
 **Real bugs found and fixed along the way** (verified via actual browser testing, not guessed):
 swapping the diamond's environment map on an already-compiled `MeshRefractionMaterial` triggered a
 genuine three.js/drei shader-recompile conflict ("macro redefined") — fixed by only ever creating
-the material once, with its final HDRI, never a swapped one. And drei's default refraction settings
-(`bounces: 3`, `fresnel: 0`) rendered the gem almost entirely black against this specific HDRI —
-tuned down to `bounces: 1` with `fresnel: 1` via iterative real-screenshot comparison until it
-actually looked like a diamond, not guessed from documentation.
+the material once, with its final HDRI, never a swapped one. And drei's default `fresnel: 0`
+rendered the gem almost entirely black against this specific HDRI (no rim term to blend in
+grazing-angle reflection where this HDRI's light sources are narrow) — fixed with `fresnel: 1`,
+confirmed via real screenshots.
 
-**What didn't ship:** a "desktop tier" with nonzero dispersion (`aberrationStrength > 0`)
-reintroduced the same near-black rendering and wasn't root-caused in the time available — shipped
-disabled rather than broken. Optional post-processing (bloom) and marker-mode lighting parity were
-scoped in the plan as explicitly optional/evaluate-last and weren't pursued, given the diamond
-refraction alone was already the major win. All of this is documented in code comments at the exact
-decision points (`Viewer.tsx`'s `DIAMOND_TIER`, `DiamondMesh.tsx`, `diamondMaterials.ts`) and in
+**Follow-up correction (same day, user asked to revisit):** a *third* claim shipped in the first
+pass of this section — that enabling dispersion (`aberrationStrength > 0`) reintroduced the
+near-black bug, so it shipped disabled. That was wrong, and the user explicitly asked for a careful
+re-investigation rather than accepting it. Root cause of the *original* wrong claim: the test that
+appeared to show a regression changed three parameters at once (`bounces`, `aberrationStrength`,
+`fastChroma`) and almost certainly screenshotted a stale build (this session had already hit that
+exact mistake once elsewhere — a build failure silently serving old `dist/` output). Re-tested
+properly this time: one variable changed per test, build success re-verified before every
+screenshot. Every combination — `bounces` 1 through 3, `aberrationStrength` 0 through 0.04,
+`fastChroma` both settings — rendered correctly. **Dispersion is enabled by default now**, on a
+genuine (if unmeasured-on-real-hardware) two-tier performance split driven by drei's
+`PerformanceMonitor`: mobile stays at the cheapest correct setting, desktop gets dispersion. Not a
+correctness fix this time — a performance-tiering decision, clearly distinguished from the earlier
+retracted claim in code comments and in README.md.
+
+Optional post-processing (bloom) and marker-mode lighting parity remain scoped in the plan as
+explicitly optional/evaluate-last and weren't pursued, given the diamond refraction alone was
+already the major win. All of this is documented in code comments at the exact decision points
+(`Viewer.tsx`'s `MOBILE_TIER`/`DESKTOP_TIER`, `DiamondMesh.tsx`, `diamondMaterials.ts`) and in
 `README.md`'s "Render quality" section, not just here.
 
 ### The card + marker mode
@@ -142,8 +155,6 @@ iframe embed test against the production URL loads cleanly with zero console err
 - The build-time asset scripts (`build:usdz`, `build:poster`) target CHIARA specifically; taking a
   `--slug` argument like `build-poster.mjs`/`build-card-target.mjs` already do is the natural next
   step for adding a second gallery model.
-- Diamond dispersion ("fire") in the live viewer is disabled — a real, verified rendering
-  regression when enabled, not yet root-caused (see "Render quality upgrade" above).
 - `MeshRefractionMaterial`'s device-capability gate is WebGL2-only; a device with WebGL2 but a GPU
   that can't compile this specific shader would need an actual compile failure to fall back, which
   isn't currently caught (shader compile failures are async/silent from JS's perspective).
