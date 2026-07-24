@@ -89,18 +89,31 @@ export function findDiamondMeshes(root: THREE.Object3D, uuids: Set<string>): Dia
  * `ior` setter (clamped roughly to [1, 2.333]) — short of a real diamond's
  * 2.42, but it strengthens the Fresnel/reflection response, which is what
  * both RealityKit and Filament actually use it for.
+ *
+ * `emissive` is set to a faint tint of the gem's own base color (verified
+ * against three's `USDZExporter` source: it writes `emissiveColor` for any
+ * material whenever `material.emissive.getHex() > 0`, independent of the
+ * `isMeshPhysicalMaterial`-gated block above — so unlike `transmission` this
+ * genuinely reaches the USDZ). Native AR has no equivalent of the app's own
+ * curated studio HDRI — Quick Look and Scene Viewer light the gem with
+ * their own neutral/real-world IBL instead — so a real diamond re-lit that
+ * way can read flat/grey. A small emissive floor keeps facets from ever
+ * going fully dark without looking like the gem is glowing (kept low enough
+ * to be a lift, not a light source; verify on a real device with C1/C2).
  */
 export function applyExportDiamondMaterials(root: THREE.Object3D, uuids: Set<string>): void {
   for (const { mesh, originalMaterial } of findDiamondMeshes(root, uuids)) {
     const source = originalMaterial as THREE.MeshStandardMaterial;
+    const baseColor = source.color?.clone() ?? new THREE.Color(0xffffff);
     const exportMaterial = new THREE.MeshPhysicalMaterial({
-      color: source.color?.clone() ?? new THREE.Color(0xffffff),
+      color: baseColor,
       metalness: 0,
       roughness: 0.03,
       ior: 2.33,
       clearcoat: 1,
       clearcoatRoughness: 0.03,
       envMapIntensity: 1.3,
+      emissive: baseColor.clone().multiplyScalar(0.05),
       name: originalMaterial.name,
     });
     exportMaterial.userData = { ...originalMaterial.userData, holoDiamondExportMaterial: true };

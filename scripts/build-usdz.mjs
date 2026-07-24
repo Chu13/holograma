@@ -145,7 +145,10 @@ function extractDiamondMaterialUuids(glbArrayBuffer) {
 }
 
 // Mirrors src/three/diamondMaterials.ts's applyExportDiamondMaterials — see
-// that file for the full reasoning (reflection strategy, not transmission).
+// that file for the full reasoning (reflection strategy, not transmission;
+// the faint emissive tint and why it, unlike transmission, actually reaches
+// the USDZ). Keep these two in sync by hand — this harness runs in a bare
+// browser page outside the app's own module graph, so it can't import it.
 function applyExportDiamondMaterials(root, uuidSet) {
   if (uuidSet.size === 0) return;
   root.traverse((child) => {
@@ -153,14 +156,16 @@ function applyExportDiamondMaterials(root, uuidSet) {
     const uuid = child.material.userData?.uuid;
     if (!uuid || !uuidSet.has(uuid)) return;
     const source = child.material;
+    const baseColor = source.color ? source.color.clone() : new THREE.Color(0xffffff);
     child.material = new THREE.MeshPhysicalMaterial({
-      color: source.color ? source.color.clone() : new THREE.Color(0xffffff),
+      color: baseColor,
       metalness: 0,
       roughness: 0.03,
       ior: 2.33,
       clearcoat: 1,
       clearcoatRoughness: 0.03,
       envMapIntensity: 1.3,
+      emissive: baseColor.clone().multiplyScalar(0.05),
       name: source.name,
     });
   });

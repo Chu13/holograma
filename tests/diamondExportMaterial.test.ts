@@ -39,6 +39,25 @@ describe("applyExportDiamondMaterials", () => {
     expect(material.thickness).toBe(0);
   });
 
+  test("applies a faint emissive tint of the base color, not a hardcoded glow", () => {
+    const mesh = buildMesh("diamond-1");
+    (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xffffff);
+    const root = new THREE.Group();
+    root.add(mesh);
+
+    applyExportDiamondMaterials(root, new Set(["diamond-1"]));
+
+    const material = mesh.material as THREE.MeshPhysicalMaterial;
+    // USDZExporter only writes emissiveColor when getHex() > 0 (verified
+    // against three's exporter source) — must be nonzero to survive export.
+    expect(material.emissive.getHex()).toBeGreaterThan(0);
+    // A lift, not a light source: each channel stays well below the base
+    // color's own value (white here), so the gem doesn't read as glowing.
+    expect(material.emissive.r).toBeLessThan(0.2);
+    expect(material.emissive.g).toBeLessThan(0.2);
+    expect(material.emissive.b).toBeLessThan(0.2);
+  });
+
   test("pushes ior toward the material system's practical ceiling for a diamond look", () => {
     const mesh = buildMesh("diamond-1");
     const root = new THREE.Group();
