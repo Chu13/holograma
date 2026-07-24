@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:usdz": "node scripts/build-usdz.mjs && node scripts/optimize-usdz.mjs",
+    "build:usdz": "node scripts/build-usdz.mjs",
     "build:poster": "node scripts/build-poster.mjs",
     "build:card": "node scripts/build-card.mjs",
     "build:card-target": "node scripts/build-card-target.mjs"

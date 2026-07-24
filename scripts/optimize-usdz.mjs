@@ -2,6 +2,19 @@
 /**
  * optimize-usdz.mjs
  *
+ * NOT currently wired into `npm run build:usdz` (see package.json) — it was,
+ * briefly, and got reverted after a real iPhone failed to open the resulting
+ * chiara.usdz in Quick Look ("View in AR" silently did nothing). Root cause
+ * not yet confirmed (leading theory: `usdzip --arkitAsset`'s repackaging, or
+ * the crate-format version macOS's bundled Apple USD Tools 0.24.3 emits, is
+ * newer/different than what that phone's on-device RealityKit USD parser
+ * accepts — `usdchecker --arkit` passing on macOS is necessary but was NOT
+ * sufficient evidence of real Quick Look compatibility). Until this is
+ * root-caused and verified working on real iOS hardware (not just
+ * `usdchecker`), the safe, previously-shipped-and-working ASCII USDZ from
+ * build-usdz.mjs alone is what's live. Keep this script for that
+ * investigation, but do not re-chain it without a real-device pass first.
+ *
  * Repackages public/models/chiara.usdz — as written by build-usdz.mjs via
  * three.js's USDZExporter — from its as-exported form (a root `model.usda`
  * text layer referencing ~50 per-mesh `geometries/Geometry_N.usda` text
@@ -11,10 +24,8 @@
  * across dozens of small files, which is why an 660KB Draco-compressed,
  * texture-free GLB balloons to an 11MB+ USDZ. Binary `usdc` stores the same
  * data as raw floats — no camera/material/quality difference, just a
- * several-times-smaller file that Quick Look also parses faster.
- *
- * Chained onto `npm run build:usdz` (see package.json) so a normal build
- * always ends with the optimized file, not a separate manual step.
+ * several-times-smaller file that Quick Look also parses faster (in theory —
+ * see the warning above).
  *
  * Uses Pixar/OpenUSD's own command-line tools (usdcat, usdzip, usdchecker)
  * — not a JS/npm package, since no maintained JS binary-USD writer exists.
